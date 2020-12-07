@@ -14,5 +14,5 @@ PyTorch
 │   └── FCN.py              // FCN网络  
 ├── predict.py              // 模型预测  
 ├── test.py                 // 模型验证  
-├── train.py                // 模型训练  
+└── train.py                // 模型训练  
 ```
