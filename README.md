@@ -4,7 +4,7 @@ PyTorch
 ## 代码目录结构说明
 ```   
 .  
-├── README.md               // 帮助   
+├── README.md               + // 帮助   
 ├── cfg.py                  // 配置文件  
 ├── ckpt                    // 训练好的模型  
 ├── dataset                 // 数据集  
