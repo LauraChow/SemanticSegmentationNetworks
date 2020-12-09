@@ -6,12 +6,12 @@ import torchvision.transforms.functional as ff
 from PIL import Image
 
 
-class ImgUtils:
+class ImgProcessor:
     @staticmethod
     def center_crop(crop_size, *imgs):
         cropped = []
         for img in imgs:
-            cropped += ff.center_crop(img, crop_size)
+            cropped.append(ff.center_crop(img, crop_size))
         return tuple(cropped)
 
     @staticmethod
@@ -25,6 +25,7 @@ class ImgUtils:
         )
         img = transform_img(img)
 
+
         # 标签处理
         label = np.array(label)
         label = Image.fromarray(label.astype('uint8'))
@@ -32,6 +33,7 @@ class ImgUtils:
         label = t.from_numpy(label)
 
         return img, label
+
 
 class LabelProcessor:
     def __init__(self, file_path):
@@ -50,12 +52,12 @@ class LabelProcessor:
 
     @staticmethod
     def encode_label_pix(colormap):  # data process and load.ipynb: 标签编码，返回哈希表
-        cm2lbl = {}
+        cm2lbl = np.zeros(256**3)
         for i, cm in enumerate(colormap):
             cm2lbl[(cm[0] * 256 + cm[1]) * 256 + cm[2]] = i
         return cm2lbl
 
     def encode_label_img(self, img):
-        data = np.array(img, dtype='int8')
+        data = np.array(img, dtype='uint8')
         idx = (data[:, :, 0] * 256 + data[:, :, 1]) * 256 + data[:, :, 2]
-        return np.array(self.cm2lbl[idx], dtype='int8')
+        return np.array(self.cm2lbl[idx], dtype='uint8')
