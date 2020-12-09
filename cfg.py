@@ -20,6 +20,7 @@ CLASS_DICT_PATH = "./dataset/CamVid/class_dict.csv"
 
 # 影像处理参数
 CROP_SIZE = (352, 480)
+ORIGIN_SIZE = (360, 480)
 
 # 训练参数
 BATCH_SIZE = 4
