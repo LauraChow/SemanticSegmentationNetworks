@@ -1,7 +1,7 @@
 import os
 
 
-class osUtils():
+class OSUtils():
     @staticmethod
     def list_file_name(path):
         file_names = [file for file in os.listdir(path)]

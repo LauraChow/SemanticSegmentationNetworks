@@ -1,6 +1,6 @@
 import os
 
-from utils import osUtils, examinationUtils, ImgUtils
+from utils import OSUtils, ExaminationUtils, ImgUtils
 
 from PIL import Image
 from torch.utils.data import Dataset
@@ -14,18 +14,18 @@ class CamvidDataset(Dataset):
                  type="train",
                  crop_size=None):
         # 检查数据集路径
-        examinationUtils.is_path_exist(dataset_path)
+        ExaminationUtils.is_path_exist(dataset_path)
 
         # 获取影像路径与标签路径并检查
         self.img_path = os.path.join(dataset_path, type)
         self.label_path = os.path.join(dataset_path, type+"_labels")
-        examinationUtils.is_path_exist(self.img_path, self.label_path)
+        ExaminationUtils.is_path_exist(self.img_path, self.label_path)
 
         # 获取影像路径下的所有影像名
-        self.img_names = osUtils.list_file_name(self.img_path)
+        self.img_names = OSUtils.list_file_name(self.img_path)
 
         # 检查标签路径是否与影像路径的影像名匹配
-        if not examinationUtils.is_file_in_path(self.img_names, self.label_path):
+        if not ExaminationUtils.is_file_in_path(self.img_names, self.label_path):
             raise ValueError("影像与标签不匹配！")
 
         # 初始化参数

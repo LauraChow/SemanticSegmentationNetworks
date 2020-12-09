@@ -1,7 +1,7 @@
 import os
 
 
-class examinationUtils():
+class ExaminationUtils():
     @staticmethod
     def is_path_exist(*paths):
         for path in paths:
