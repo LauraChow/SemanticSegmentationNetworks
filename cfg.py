@@ -19,7 +19,7 @@ DATASET_PATH = "./dataset/CamVid"
 CLASS_DICT_PATH = "./dataset/CamVid/class_dict.csv"
 
 # 数据集参数
-CLASS_NUM = 12
+DATASET = ['CamVid', 12]
 CHANNEL_NUM = 3
 CROP_SIZE = (352, 480)
 ORIGIN_SIZE = (360, 480)

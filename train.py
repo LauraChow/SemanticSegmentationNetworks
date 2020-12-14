@@ -3,7 +3,9 @@
 import cfg
 from model import FCN
 from dataset import CamvidDataset
+from evaluation_indices import eval_semantic_segmentation
 
+import numpy as np
 import tqdm
 import torchsummary
 import torch as t
@@ -12,7 +14,7 @@ from torch.utils.data import DataLoader
 import torch.nn as nn
 import torch.nn.functional as F
 
-import torchnet.meter as meter
+from torchnet import meter
 
 # 选择设备
 device = t.device('cuda') if t.cuda.is_available() else t.device('cpu')
@@ -22,10 +24,14 @@ def train(model, train_dataloader, val_dataloader, criterion, optimizer):
     # 设置模型为训练模式
     network = model.train()
 
+    train_loss = meter.AverageValueMeter()
+    train_cm = meter.ConfusionMeter(cfg.DATASET[1])
     # 循环cfg.EPOCH_NUM次
     for epoch in range(cfg.EPOCH_NUM):
+        train_loss.reset()
+        train_cm.reset()
         with tqdm.tqdm(enumerate(train_dataloader), desc="epoch %3d/%-3d" % (epoch + 1, cfg.EPOCH_NUM),
-                       total=len(train_dataloader), ncols=100) as tdata:
+                       total=len(train_dataloader), dynamic_ncols=True) as tdata:
             for step, sample in tdata:
                 # 载入数据
                 img = sample["img"].to(device)
@@ -34,10 +40,6 @@ def train(model, train_dataloader, val_dataloader, criterion, optimizer):
                 # 通过网络得到预测值
                 pred = network(img)
                 pred = F.log_softmax(pred, dim=1)
-                print(pred.shape)
-                print(label.shape)
-                print(pred.dtype)
-                print(label.dtype)
 
                 # 计算loss与梯度
                 loss = criterion(pred, label)
@@ -48,6 +50,20 @@ def train(model, train_dataloader, val_dataloader, criterion, optimizer):
                 optimizer.step()
 
                 # 计算训练的loss与accuracy
+                train_loss.add(loss.item())
+
+                pre_label = pred.max(dim=1)[1].view(-1)
+                true_label = label.view(-1)
+                train_cm.add(pre_label, true_label)
+
+                cm = train_cm.value()
+                train_acc = np.trace(cm) / np.nansum(cm)
+
+                # 输出训练loss与acc
+                tdata.set_postfix_str("loss|acc(train): %.4f|%.4f, loss|acc(val): %.4f|%.4f, lr: %.4f"
+                                  % (train_loss.value()[0], train_acc, 0, 0, cfg.LEARNING_RATE))
+
+
 
 
 
@@ -61,7 +77,7 @@ if __name__ == "__main__":
     val_dl = DataLoader(val_ds, batch_size=cfg.BATCH_SIZE, shuffle=True, num_workers=cfg.WORKERS_NUM)
 
     # 加载模型并部署到设备上
-    fcn = FCN.FCN(cfg.CLASS_NUM)
+    fcn = FCN.FCN(cfg.DATASET[1])
     # torchsummary.summary(model, (cfg.CHANNEL_NUM,) + cfg.CROP_SIZE, device="cpu")
     fcn.to(device)
 
