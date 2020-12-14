@@ -34,7 +34,7 @@ class FCN(nn.Module):
         self.stage4 = self.vgg16.features[24:34]
         self.stage5 = self.vgg16.features[34:]
 
-        # 两个改变通道数的过度卷积
+        # 两个改变通道数的过渡卷积
         self.conv1 = nn.Conv2d(512, 256, 1)
         self.conv2 = nn.Conv2d(256, num_classes, 1)
 
@@ -65,19 +65,20 @@ class FCN(nn.Module):
         pool5 = self.stage5(pool4)  # (bn, 512, 22,  30)  -> (bn, 512，11,  15)
 
         # pool5 2x上采样得到add1
-        pool5_2x = self.upsample_2x_1(pool5)   # (bn, 512，11,  15) -> (bn, 512，22, 30)
-        add1 = pool4 + pool5_2x    # (bn, 512，22, 30) -> (bn, 512，22, 30)
+        pool5_2x = self.upsample_2x_1(pool5)    # (bn, 512，11, 15) -> (bn, 512，22, 30)
+        add1 = pool4 + pool5_2x                 # (bn, 512，22, 30) -> (bn, 512，22, 30)
 
         # add1 2x上采样得到add2
-        add1 = self.conv1(add1)     # (bn, 512, 22, 30) -> (bn, 256，20, 30)
-        add1_2x = self.upsample_2x_2(add1)  # (bn, 256，22, 30) -> (bn, 256, 44, 60)
-        add2 = pool3 + add1_2x              # (bn, 256，44, 60) -> (bn, 256，44, 60)
+        add1 = self.conv1(add1)                 # (bn, 512, 22, 30) -> (bn, 256，22, 30)
+        add1_2x = self.upsample_2x_2(add1)      # (bn, 256，22, 30) -> (bn, 256, 44, 60)
+        add2 = pool3 + add1_2x                  # (bn, 256，44, 60) -> (bn, 256，44, 60)
 
         # add2通过过度卷积改变通道数后 8x上采样得到分数图
-        add2 = self.conv2(add2)     # (bn, 256，44, 60) -> (bn, 12，44, 60)
-        y = self.upsample_8x(add2)  # (bn, 12，44, 60) -> (bn, 12，352, 480)
+        add2 = self.conv2(add2)                 # (bn, 256，44, 60) -> (bn, 12，44, 60)
+        y = self.upsample_8x(add2)              # (bn, 12，44, 60) -> (bn, 12，352, 480)
 
         return y
+
 
 if __name__ == "__main__":
     import torch as t
@@ -86,5 +87,4 @@ if __name__ == "__main__":
     rgb = t.randn(1, 3, 352, 480)
     net = FCN(12)
     out = net(rgb)
-
     print(out.shape)

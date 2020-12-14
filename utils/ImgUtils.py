@@ -60,4 +60,4 @@ class LabelProcessor:
     def encode_label_img(self, img):
         data = np.array(img, dtype='uint8')
         idx = (data[:, :, 0] * 256 + data[:, :, 1]) * 256 + data[:, :, 2]
-        return np.array(self.cm2lbl[idx], dtype='uint8')
+        return np.array(self.cm2lbl[idx], dtype='long')

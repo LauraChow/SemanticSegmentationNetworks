@@ -51,12 +51,3 @@ class CamvidDataset(Dataset):
 
     def __len__(self):
         return len(self.imgs)
-
-
-# 测试代码
-if __name__ == "__main__":
-    train = CamvidDataset(type="train", crop_size=cfg.CROP_SIZE)
-    val = CamvidDataset(type="val", crop_size=cfg.CROP_SIZE)
-    test = CamvidDataset(type="test", crop_size=cfg.CROP_SIZE)
-
-    print(train[0], val[0], test[1])

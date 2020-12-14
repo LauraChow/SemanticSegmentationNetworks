@@ -18,11 +18,14 @@
 DATASET_PATH = "./dataset/CamVid"
 CLASS_DICT_PATH = "./dataset/CamVid/class_dict.csv"
 
-# 影像处理参数
+# 数据集参数
+CLASS_NUM = 12
+CHANNEL_NUM = 3
 CROP_SIZE = (352, 480)
 ORIGIN_SIZE = (360, 480)
 
 # 训练参数
+EPOCH_NUM = 200
 BATCH_SIZE = 4
-NUM_WORKERS = 4
-LEARNING_RATE = 0.01
+WORKERS_NUM = 4
+LEARNING_RATE = .01
