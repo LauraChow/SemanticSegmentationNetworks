@@ -1,9 +1,10 @@
-
+import os
 
 import cfg
 from model import FCN
 from dataset import CamvidDataset
 from evaluation_indices import eval_semantic_segmentation
+from utils import PrettyFormatUtils
 
 import numpy as np
 import tqdm
@@ -15,38 +16,52 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from torchnet import meter
+from torch.utils.tensorboard import SummaryWriter
 
 # 选择设备
 device = t.device('cuda') if t.cuda.is_available() else t.device('cpu')
 
 # 训练
-def train(model, train_dataloader, val_dataloader, criterion, optimizer):
-    print("开始训练！")
-    # 设置模型为训练模式
-    network = model.train()
+def train(model, train_dataloader, val_dataloader, criterion, optimizer, scheduler,
+          model_save_path, comment=""):
+    PrettyFormatUtils.print_title("训练")
 
+    # 如果有之前训练好的模型，则加载
+    epoch_start = 0
+    best_loss = float("inf")
+    val_loss, val_acc = float("inf"), 0
+
+    if os.path.exists(os.path.join(model_save_path, comment, "ckpt.pth")):
+        epoch_start, model, optimizer, scheduler, best_loss = load_model(os.path.join(model_save_path, comment, "ckpt.pth"),
+                                                              model, optimizer, scheduler)
+
+    # 初始化训练指标：loss与混淆矩阵
     train_loss_meter = meter.AverageValueMeter()
     train_cm_meter = meter.ConfusionMeter(cfg.DATASET[1])
-
+    writer = SummaryWriter(log_dir=os.path.join(model_save_path, comment, "runs"))
     # 循环cfg.EPOCH_NUM次
-    for epoch in range(cfg.EPOCH_NUM):
+    for epoch in range(epoch_start, cfg.EPOCH_NUM):
         train_loss_meter.reset()
         train_cm_meter.reset()
+
+        # 设置模型为训练模式
+        model = model.train()
         with tqdm.tqdm(enumerate(train_dataloader),
                        desc="epoch %3d/%-3d" % (epoch + 1, cfg.EPOCH_NUM),
                        postfix="loss|acc(train): %.4f|%.4f, loss|acc(val): %.4f|%.4f, lr: %.4f"
-                               % (0, 0, 0, 0, cfg.LEARNING_RATE),
+                               % (0, 0, 0, 0, optimizer.state_dict()["param_groups"][0]["lr"]),
                        total=len(train_dataloader), dynamic_ncols=True) as tdata:
             for step, sample in tdata:
+                # 获取当前的迭代次数（以batch为单位）
+                n_iter = epoch * len(train_dataloader) + step
                 # 载入数据
                 img = sample["img"].to(device)
                 label = sample["label"].to(device)
 
                 # 通过网络得到预测值与损失
-                pred = network(img)
+                pred = model(img)
                 pred = F.log_softmax(pred, dim=1)
                 loss = criterion(pred, label)
-                print(loss)
 
                 # 梯度下降
                 optimizer.zero_grad()
@@ -58,18 +73,26 @@ def train(model, train_dataloader, val_dataloader, criterion, optimizer):
 
                 # # 输出训练loss与acc
                 # tdata.set_postfix_str("loss|acc(train): %.4f|%.4f, loss|acc(val): %.4f|%.4f, lr: %.4f"
-                #                   % (train_loss, train_acc, 0, 0, cfg.LEARNING_RATE))
+                #                   % (train_loss, train_acc, 0, 0,
+                #                      optimizer.state_dict()["param_groups"][0]["lr"]))
+                if step == len(train_dataloader)-1:
+                    val_loss, val_acc = val(model, val_dataloader, criterion)
 
-            val_loss, val_acc = val(model, val_dataloader, criterion)
-            # 输出训练loss与acc
-            tdata.set_postfix_str("loss|acc(train): %.4f|%.4f, loss|acc(val): %.4f|%.4f, lr: %.4f"
-                                  % (train_loss, train_acc, val_loss, val_acc, cfg.LEARNING_RATE))
+                # 输出训练loss与acc
+                tdata.set_postfix_str("loss|acc(train): %.4f|%.4f, loss|acc(val): %.4f|%.4f, lr: %.4f"
+                                      % (train_loss, train_acc, val_loss, val_acc,
+                                         optimizer.state_dict()["param_groups"][0]["lr"]), refresh=True)
 
+        scheduler.step(val_loss)
+
+        if val_loss < best_loss:
+            best_loss = val_loss
+            save_model(os.path.join(model_save_path, comment),
+                       epoch, model, optimizer, scheduler, best_loss)
 
 # 验证
 @t.no_grad()
 def val(model, val_dataloader, criterion):
-    print("开始验证！")
     # 网络为验证模式
     network = model.eval()
 
@@ -84,7 +107,6 @@ def val(model, val_dataloader, criterion):
         pred = network(img)
         pred = F.log_softmax(pred, dim=1)
         loss = criterion(pred, label)
-        print(loss)
 
         # 计算验证的loss与accuracy
         val_loss, val_acc = calculate_indices(pred, label, loss, val_loss_meter, val_cm_meter)
@@ -104,6 +126,31 @@ def calculate_indices(pred, label, loss, loss_meter, confusion_matrix_meter):
 
     return loss_meter.value()[0], accuracy
 
+
+def save_model(save_path,
+               epoch, model, optimizer, scheduler, best_loss):
+    if not os.path.exists(save_path):
+        os.mkdir(save_path)
+
+    t.save({"epoch": epoch,
+            "model": model.state_dict(),
+            "optimizer": optimizer.state_dict(),
+            "scheduler": scheduler.state_dict(),
+            "best_loss": best_loss
+            }, os.path.join(save_path, "ckpt.pth"))
+
+
+def load_model(save_path,
+               model, optimizer, scheduler):
+    ckpt = t.load(save_path, map_location=t.device('cpu'))
+
+    epoch_start = ckpt["epoch"]+1
+    model.load_state_dict(ckpt["model"])
+    optimizer.load_state_dict(ckpt["optimizer"])
+    scheduler.load_state_dict(ckpt["scheduler"])
+    best_loss = ckpt["best_loss"]
+
+    return epoch_start, model, optimizer, scheduler, best_loss
 
 
 if __name__ == "__main__":
@@ -126,5 +173,8 @@ if __name__ == "__main__":
     # 优化器
     optimizer = optim.Adam(fcn.parameters(), lr=cfg.LEARNING_RATE)
 
+    # 学习率调整
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, mode='min', factor=0.5, patience=2,
+                                                     min_lr=0.00001, threshold=1)
     # 训练
-    train(fcn, train_dl, val_dl, criterion, optimizer)
+    train(fcn, train_dl, val_dl, criterion, optimizer, scheduler, cfg.MODEL_SAVE_PATH)

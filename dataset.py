@@ -1,7 +1,7 @@
 import os
 
 import cfg
-from utils import OSUtils, ExaminationUtils, ImgUtils
+from utils import OSUtils, ExaminationUtils, ImgUtils, PrettyFormatUtils
 
 from PIL import Image
 from torch.utils.data import Dataset
@@ -16,7 +16,7 @@ class CamvidDataset(Dataset):
                  class_dict_path="./dataset/CamVid/class_dict.csv",
                  type="train",
                  crop_size=None):
-        print("初始化", type, "set ... ...")
+        PrettyFormatUtils.print_title(type+" set "+"初始化")
 
         # 检查数据集路径
         ExaminationUtils.is_path_exist(dataset_path)
