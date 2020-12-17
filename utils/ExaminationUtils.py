@@ -1,10 +1,13 @@
 import os
 
 
-def is_path_exist(*paths):
+def is_path_exist(create, *paths):
     for path in paths:
         if not os.path.exists(path):
-            raise FileNotFoundError("路径："+path+"不存在！")
+            if create:
+                os.mkdir(path)
+            else:
+                raise FileNotFoundError("路径："+path+"不存在！")
 
 
 # def is_file_in_path(file_names, path):

@@ -22,7 +22,6 @@ CLASS_DICT_PATH = "./dataset/CamVid/class_dict.csv"
 DATASET = ['CamVid', 12]
 CHANNEL_NUM = 3
 CROP_SIZE = (352, 480)
-ORIGIN_SIZE = (360, 480)
 
 # 训练参数
 EPOCH_NUM = 200
@@ -32,3 +31,4 @@ LEARNING_RATE = .01
 
 # 模型保存路径
 MODEL_SAVE_PATH = "./ckpt/FCN"
+PREDICT_SAVE_PATH = "./dataset/CamVid/results/"

@@ -19,12 +19,12 @@ class CamvidDataset(Dataset):
         PrettyFormatUtils.print_title(type+" set "+"初始化")
 
         # 检查数据集路径
-        ExaminationUtils.is_path_exist(dataset_path)
+        ExaminationUtils.is_path_exist(False, dataset_path)
 
         # 获取影像路径与标签路径并检查
         self.img_path = os.path.join(dataset_path, type)
         self.label_path = os.path.join(dataset_path, type+"_labels")
-        ExaminationUtils.is_path_exist(self.img_path, self.label_path)
+        ExaminationUtils.is_path_exist(False, self.img_path, self.label_path)
 
         # 获取影像路径下的所有影像名
         self.imgs = OSUtils.list_file_name(self.img_path)
