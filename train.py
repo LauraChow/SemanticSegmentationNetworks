@@ -5,7 +5,9 @@ import cfg
 from model import FCN
 from dataset import CamvidDataset
 from evaluation_indices import cal_semantic_segmentation_indices
-from utils import PrettyFormatUtils, ImgUtils, ExaminationUtils
+from utils import PrettyFormatUtils, ExaminationUtils
+from utils.ImgUtils.LabelProcessor import LabelProcessor
+
 
 import tqdm
 import torchsummary
@@ -18,11 +20,9 @@ import torch.nn.functional as F
 from torchnet import meter
 from torch.utils.tensorboard import SummaryWriter
 
-# 选择设备
-device = t.device('cuda') if t.cuda.is_available() else t.device('cpu')
 
 # 训练
-def train(model, train_dataloader, val_dataloader, criterion, optimizer, scheduler,
+def train(model, train_dataloader, val_dataloader, criterion, optimizer, scheduler, device,
           model_save_path, comment=""):
     # 提示为训练模式
     PrettyFormatUtils.print_title("训练")
@@ -81,7 +81,7 @@ def train(model, train_dataloader, val_dataloader, criterion, optimizer, schedul
 
                 # 每个epoch最后计算验证的指标
                 if step == len(train_dataloader)-1:
-                    val_loss, val_acc = val(model, val_dataloader, criterion)
+                    val_loss, val_acc = val(model, val_dataloader, criterion, device)
                     PrettyFormatUtils.log_indices(writer, val_loss, val_acc, n_iter, "Val")
 
                 # 在进度条上更新训练/验证的loss与acc
@@ -102,7 +102,7 @@ def train(model, train_dataloader, val_dataloader, criterion, optimizer, schedul
 
 # 验证
 @t.no_grad()
-def val(model, val_dataloader, criterion):
+def val(model, val_dataloader, criterion, device):
     # 网络为验证模式
     model.eval()
 
@@ -130,7 +130,8 @@ def val(model, val_dataloader, criterion):
 
 # 测试
 @t.no_grad()
-def test(model, test_dataloader, model_save_path, comment=""):
+def test(model, test_dataloader, device,
+         model_save_path, comment=""):
     # 提示为训练模式
     PrettyFormatUtils.print_title("测试")
 
@@ -174,7 +175,8 @@ def test(model, test_dataloader, model_save_path, comment=""):
 
 # 预测
 @t.no_grad()
-def predict(model, predict_dataloader, prediction_save_path, class_dict_path, model_save_path, comment=""):
+def predict(model, predict_dataloader, prediction_save_path, class_dict_path, device,
+            model_save_path, comment=""):
     # 提示为训练模式
     PrettyFormatUtils.print_title("预测")
 
@@ -182,7 +184,7 @@ def predict(model, predict_dataloader, prediction_save_path, class_dict_path, mo
     ExaminationUtils.is_path_exist(False, model_path, class_dict_path)
     ExaminationUtils.is_path_exist(True, prediction_save_path)
 
-    label_processor = ImgUtils.LabelProcessor(class_dict_path)
+    label_processor = LabelProcessor(class_dict_path)
 
     # 加载模型
     ckpt = t.load(model_path, map_location=t.device('cpu'))
@@ -233,6 +235,9 @@ def load_model(save_path,
 
 
 if __name__ == "__main__":
+    # 选择设备
+    device = t.device('cuda') if t.cuda.is_available() else t.device('cpu')
+
     # 初始化训练验证数据集
     train_ds = CamvidDataset(type="train", crop_size=cfg.CROP_SIZE)
     val_ds = CamvidDataset(type="val", crop_size=cfg.CROP_SIZE)
@@ -261,10 +266,10 @@ if __name__ == "__main__":
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, mode='min', factor=0.5, patience=2,
                                                      min_lr=0.00001, threshold=1)
     # 训练
-    train(fcn, train_dl, val_dl, criterion, optimizer, scheduler, cfg.MODEL_SAVE_PATH)
+    # train(fcn, train_dl, val_dl, criterion, optimizer, scheduler, device, cfg.MODEL_SAVE_PATH)
 
     # 测试
-    test(fcn, test_dl, cfg.MODEL_SAVE_PATH)
+    # test(fcn, test_dl, device, cfg.MODEL_SAVE_PATH)
 
     # 预测
-    predict(fcn, predict_dl, cfg.PREDICT_SAVE_PATH, cfg.CLASS_DICT_PATH, cfg.MODEL_SAVE_PATH)
+    predict(fcn, predict_dl, cfg.PREDICT_SAVE_PATH, cfg.CLASS_DICT_PATH, device, cfg.MODEL_SAVE_PATH)
