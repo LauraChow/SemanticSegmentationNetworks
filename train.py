@@ -52,7 +52,7 @@ def train(model, train_dataloader, val_dataloader, criterion, optimizer, schedul
         with tqdm.tqdm(enumerate(train_dataloader),
                        desc="epoch %3d/%-3d" % (epoch + 1, cfg.EPOCH_NUM),
                        postfix="loss|acc(train): %.4f|%.4f, loss|acc(val): %.4f|%.4f, lr: %.4f"
-                               % (0, 0, 0, 0, optimizer.state_dict()["param_groups"][0]["lr"]),
+                               % (float("inf"), 0, float("inf"), 0, optimizer.state_dict()["param_groups"][0]["lr"]),
                        total=len(train_dataloader), dynamic_ncols=True) as tdata:
             for step, sample in tdata:
                 # 获取当前的迭代次数（以batch为单位）
@@ -67,14 +67,17 @@ def train(model, train_dataloader, val_dataloader, criterion, optimizer, schedul
                 pred = F.log_softmax(pred, dim=1)
                 loss = criterion(pred, label)
 
+
                 # 梯度下降
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
 
                 # 计算训练的指标
-                train_loss, train_acc = cal_semantic_segmentation_indices(pred, label, loss, train_loss_meter, train_cm_meter)
-                PrettyFormatUtils.log_indices(writer, train_loss, train_acc, n_iter)
+                train_loss_meter.add(loss.item())
+                train_loss = train_loss_meter.value()[0]
+                train_dict = cal_semantic_segmentation_indices(pred, label, train_cm_meter)
+                PrettyFormatUtils.log_indices(writer, train_loss, train_dict["OverallAccuracy"], n_iter)
 
                 # 每个epoch最后计算验证的指标
                 if step == len(train_dataloader)-1:
@@ -83,7 +86,7 @@ def train(model, train_dataloader, val_dataloader, criterion, optimizer, schedul
 
                 # 在进度条上更新训练/验证的loss与acc
                 tdata.set_postfix_str("loss|acc(train): %.4f|%.4f, loss|acc(val): %.4f|%.4f, lr: %.4f"
-                                      % (train_loss, train_acc, val_loss, val_acc,
+                                      % (train_loss, train_dict["OverallAccuracy"], val_loss, val_acc,
                                          optimizer.state_dict()["param_groups"][0]["lr"]))
 
         # 根据验证集的表现调整学习率
@@ -119,9 +122,11 @@ def val(model, val_dataloader, criterion):
         loss = criterion(pred, label)
 
         # 计算验证的指标
-        val_loss, val_acc = cal_semantic_segmentation_indices(pred, label, loss, val_loss_meter, val_cm_meter)
+        val_loss_meter.add(loss.item())
+        val_loss = val_loss_meter.value()[0]
+        val_dict = cal_semantic_segmentation_indices(pred, label, val_cm_meter)
 
-    return val_loss, val_acc
+    return val_loss, val_dict["OverallAccuracy"]
 
 # 测试
 @t.no_grad()
@@ -158,10 +163,12 @@ def test(model, test_dataloader, model_save_path, comment=""):
             loss = criterion(pred, label)
 
             # 计算验证的指标
-            test_loss, test_acc = cal_semantic_segmentation_indices(pred, label, loss, test_loss_meter, test_cm_meter)
+            test_loss_meter.add(loss.item())
+            test_loss = test_loss_meter.value()[0]
+            test_dict = cal_semantic_segmentation_indices(pred, label, test_cm_meter)
 
             # 在进度条上更新训练/验证的loss与acc
-            tdata.set_postfix_str("loss|acc: %.4f|%.4f" % (test_loss, test_acc))
+            tdata.set_postfix_str("loss|acc: %.4f|%.4f" % (test_loss, test_dict["OverallAccuracy"]))
 
     print("Test loss:", test_loss)
 
@@ -254,7 +261,7 @@ if __name__ == "__main__":
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, mode='min', factor=0.5, patience=2,
                                                      min_lr=0.00001, threshold=1)
     # 训练
-    # train(fcn, train_dl, val_dl, criterion, optimizer, scheduler, cfg.MODEL_SAVE_PATH)
+    train(fcn, train_dl, val_dl, criterion, optimizer, scheduler, cfg.MODEL_SAVE_PATH)
 
     # 测试
     test(fcn, test_dl, cfg.MODEL_SAVE_PATH)

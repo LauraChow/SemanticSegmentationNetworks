@@ -21,6 +21,7 @@ def bilinear_kernel(in_channels, out_channels, kernel_size):
     weight[range(in_channels), range(out_channels), :, :] = bilinear_filter
     return torch.from_numpy(weight)
 
+
 class FCN(nn.Module):
     vgg16 = models.vgg16_bn(pretrained=True)
 
@@ -78,13 +79,3 @@ class FCN(nn.Module):
         y = self.upsample_8x(add2)              # (bn, 12，44, 60) -> (bn, 12，352, 480)
 
         return y
-
-
-if __name__ == "__main__":
-    import torch as t
-
-    print('-----' * 5)
-    rgb = t.randn(1, 3, 352, 480)
-    net = FCN(12)
-    out = net(rgb)
-    print(out.shape)

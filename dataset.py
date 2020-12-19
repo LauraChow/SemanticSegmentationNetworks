@@ -1,7 +1,9 @@
 import os
 
 import cfg
-from utils import OSUtils, ExaminationUtils, ImgUtils, PrettyFormatUtils
+from utils import OSUtils, ExaminationUtils, PrettyFormatUtils
+from utils.ImgUtils import ImgProcessor
+from utils.ImgUtils.LabelProcessor import LabelProcessor
 
 from PIL import Image
 from torch.utils.data import Dataset
@@ -9,7 +11,7 @@ from torch.utils.data import Dataset
 
 # 处理Camvid数据集的类
 class CamvidDataset(Dataset):
-    label_processor = ImgUtils.LabelProcessor(cfg.CLASS_DICT_PATH)
+    label_processor = LabelProcessor(cfg.CLASS_DICT_PATH)
 
     # 相当于CamvidDataset的构造函数
     def __init__(self, dataset_path="./dataset/CamVid",
@@ -44,8 +46,8 @@ class CamvidDataset(Dataset):
         label = Image.open(self.labels[idx]).convert('RGB')
 
         # 预处理：影像、标签中心裁剪，影像归一化，标签由三通道颜色值转为相应类别的索引
-        img, label = ImgUtils.ImgProcessor.center_crop(self.crop_size, img, label)
-        img, label = ImgUtils.ImgProcessor.img_transform(img, label, self.label_processor)
+        img, label = ImgProcessor.center_crop(self.crop_size, img, label)
+        img, label = ImgProcessor.img_transform(img, label, self.label_processor)
 
         return {"img": img, "label": label}
 
