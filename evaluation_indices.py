@@ -1,7 +1,7 @@
 import numpy as np
 
-def cal_semantic_segmentation_indices(pred, label, confusion_matrix_meter):
 
+def cal_semantic_segmentation_indices(pred, label, confusion_matrix_meter):
     pre_label = pred.max(dim=1)[1].view(-1)
     true_label = label.view(-1)
     confusion_matrix_meter.add(pre_label, true_label)
@@ -31,8 +31,10 @@ def cal_iou(confusion_matrix):
     denominator = (confusion_matrix.sum(axis=0) + confusion_matrix.sum(axis=1) - np.diag(confusion_matrix) + 1e-10)
     return np.diag(confusion_matrix) / denominator
 
+
 def cal_miou(iou):
     return np.nanmean(iou)
+
 
 def cal_kappa(confusion_matrix):
     pe = (confusion_matrix.sum(axis=0) * confusion_matrix.sum(axis=1)).sum() / (confusion_matrix.sum() ** 2)

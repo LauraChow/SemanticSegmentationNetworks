@@ -266,10 +266,10 @@ if __name__ == "__main__":
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, mode='min', factor=0.5, patience=2,
                                                      min_lr=0.00001, threshold=1)
     # 训练
-    # train(fcn, train_dl, val_dl, criterion, optimizer, scheduler, device, cfg.MODEL_SAVE_PATH)
+    train(fcn, train_dl, val_dl, criterion, optimizer, scheduler, device, cfg.MODEL_SAVE_PATH)
 
     # 测试
-    # test(fcn, test_dl, device, cfg.MODEL_SAVE_PATH)
+    test(fcn, test_dl, device, cfg.MODEL_SAVE_PATH)
 
     # 预测
     predict(fcn, predict_dl, cfg.PREDICT_SAVE_PATH, cfg.CLASS_DICT_PATH, device, cfg.MODEL_SAVE_PATH)

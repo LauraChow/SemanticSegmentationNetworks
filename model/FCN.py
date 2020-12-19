@@ -5,11 +5,8 @@ from torchvision import models
 from torch import nn
 
 
+# 双线性插值初始化反卷积核
 def bilinear_kernel(in_channels, out_channels, kernel_size):
-    """Define a bilinear kernel according to in channels and out channels.
-    Returns:
-        return a bilinear filter tensor
-    """
     factor = (kernel_size + 1) // 2
     if kernel_size % 2 == 1:
         center = factor - 1
@@ -22,6 +19,7 @@ def bilinear_kernel(in_channels, out_channels, kernel_size):
     return torch.from_numpy(weight)
 
 
+# FCN类
 class FCN(nn.Module):
     vgg16 = models.vgg16_bn(pretrained=True)
 
